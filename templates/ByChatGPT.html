@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>ระบบแนะนำช่วงเวลาที่เหมาะสมสำหรับการปลูกข้าว</title>
+  <!-- ลิงก์ไปไฟล์ CSS ที่แยกออกมา -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+</head>
+
+<body>
+  <div class="page">
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-left">
+        <div class="logo-box"></div>
+        <div class="logo-box"></div>
+      </div>
+      <div class="header-title">
+        ระบบแนะนำช่วงเวลาที่เหมาะสมสำหรับการปลูกข้าว
+      </div>
+      <div class="header-right">
+        <div class="header-right-text">
+          ผลการประเมินข้อมูล &nbsp;|&nbsp; สำนักงานกองทุนฯ<br />
+          (พื้นที่ตัวอย่าง แสดงเพื่อการออกแบบหน้าเว็บ)
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <div class="filter-label">จังหวัด</div>
+        <div class="filter-select">
+          <select id="provinceSelect">
+            <option value="พัทลุง">พัทลุง</option>
+            <option value="สุรินทร์">สุรินทร์</option>
+            <option value="ร้อยเอ็ด">ร้อยเอ็ด</option>
+            <option value="มหาสารคาม">มหาสารคาม</option>
+            <option value="ศรีสะเกษ">ศรีสะเกษ</option>
+            <option value="ยโสธร">ยโสธร</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">อำเภอ</div>
+        <div class="filter-select">
+          <select id="districtSelect">
+            <option value="">-- กรุณาเลือกอำเภอ --</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">ตำบล</div>
+        <div class="filter-select">
+          <select id="subdistrictSelect">
+            <option value="">-- กรุณาเลือกตำบล --</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">ชนิดข้าว</div>
+        <div class="filter-select">
+          <select>
+            <option>เบา</option>
+            <option>กลาง</option>
+            <option>หนัก</option>
+            <option>หนักมาก</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">วิธีการปลูก</div>
+        <div class="filter-select">
+          <select>
+            <option>หว่าน</option>
+            <option>ปักดำ</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN: MAP + RAIN -->
+    <div class="main">
+      <div class="panel map-panel">
+        <div class="panel-title">พื้นที่ปลูกข้าว</div>
+        <div class="map-body">
+          <!-- div สำหรับ Leaflet map -->
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <div class="panel rain-panel">
+        <div class="panel-title">ปริมาณน้ำฝน (หน่วย : มม./ไร่)</div>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <div class="legend-rect"></div>
+            <span>ปริมาณน้ำฝน (คาดจริง)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#f4a22b;"></div>
+            <span>ปริมาณน้ำฝน (คาดการณ์)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#00b0f0;"></div>
+            <span>ปัจจุบัน</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#7f7f7f;"></div>
+            <span>ค่าเฉลี่ยน้ำฝนย้อนหลัง 15 ปี</span>
+          </div>
+        </div>
+        <div class="rain-chart-body">
+          <canvas id="rainChart"></canvas>
+        </div>
+
+        <!-- ICON BAR (ช่วงรูปข้าวที่กดได้) อยู่ในกรอบกราฟแล้ว -->
+        <div class="icon-bar" id="riceStageBar">
+          <!-- พ.ค. 68 -->
+          <div class="icon-cell" data-label="1 พ.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="11 พ.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="21 พ.ค. 68">🌾</div>
+
+          <!-- มิ.ย. 68 -->
+          <div class="icon-cell" data-label="1 มิ.ย. 68">🌾</div>
+          <div class="icon-cell" data-label="11 มิ.ย. 68">🌾</div>
+          <div class="icon-cell" data-label="21 มิ.ย. 68">🌾</div>
+
+          <!-- ก.ค. 68 -->
+          <div class="icon-cell" data-label="1 ก.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="11 ก.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="21 ก.ค. 68">🌾</div>
+
+          <!-- ส.ค. 68 -->
+          <div class="icon-cell" data-label="1 ส.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="11 ส.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="21 ส.ค. 68">🌾</div>
+
+          <!-- ก.ย. 68 -->
+          <div class="icon-cell" data-label="1 ก.ย. 68">🌾</div>
+          <div class="icon-cell" data-label="11 ก.ย. 68">🌾</div>
+          <div class="icon-cell" data-label="21 ก.ย. 68">🌾</div>
+
+          <!-- ต.ค. 68 -->
+          <div class="icon-cell" data-label="1 ต.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="11 ต.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="21 ต.ค. 68">🌾</div>
+
+          <!-- พ.ย. 68 -->
+          <div class="icon-cell" data-label="1 พ.ย. 68">🌾</div>
+          <div class="icon-cell" data-label="11 พ.ย. 68">🌾</div>
+          <div class="icon-cell" data-label="21 พ.ย. 68">🌾</div>
+
+          <!-- ธ.ค. 68 -->
+          <div class="icon-cell" data-label="1 ธ.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="11 ธ.ค. 68">🌾</div>
+          <div class="icon-cell" data-label="21 ธ.ค. 68">🌾</div>
+
+          <!-- ม.ค. 69 -->
+          <div class="icon-cell" data-label="1 ม.ค. 69">🌾</div>
+          <div class="icon-cell" data-label="11 ม.ค. 69">🌾</div>
+          <div class="icon-cell" data-label="21 ม.ค. 69">🌾</div>
+
+          <!-- ก.พ. 69 -->
+          <div class="icon-cell" data-label="1 ก.พ. 69">🌾</div>
+          <div class="icon-cell" data-label="11 ก.พ. 69">🌾</div>
+          <div class="icon-cell" data-label="21 ก.พ. 69">🌾</div>
+
+          <!-- มี.ค. 69 -->
+          <div class="icon-cell" data-label="1 มี.ค. 69">🌾</div>
+          <div class="icon-cell" data-label="11 มี.ค. 69">🌾</div>
+          <div class="icon-cell" data-label="21 มี.ค. 69">🌾</div>
+
+          <!-- เม.ย. 69 -->
+          <div class="icon-cell" data-label="1 เม.ย. 69">🌾</div>
+          <div class="icon-cell" data-label="11 เม.ย. 69">🌾</div>
+          <div class="icon-cell" data-label="21 เม.ย. 69">🌾</div>
+        </div>
+
+
+      </div>
+    </div>
+
+    <!-- แถวล่าง: ซ้าย = ปฏิทินความเสี่ยง, ขวา = KPI + ต้นทุน -->
+    <div class="main-lower">
+      <!-- ซ้ายล่างใต้แผนที่ -->
+      <div class="calendar-panel">
+        <div class="panel-title">ปฏิทินระดับความเสี่ยงการสูญเสียผลผลิต</div>
+
+        <div class="calendar-header-row">
+          <div id="yield-calendar-title" class="calendar-title-text">
+            <!-- จะถูก JS เขียนชื่อเดือน/ปีให้ -->
+          </div>
+          <div class="calendar-legend">
+            <span class="calendar-legend-item">
+              <span class="calendar-legend-color yield-level-0"></span> ตามเกณฑ์
+            </span>
+            <span class="calendar-legend-item">
+              <span class="calendar-legend-color yield-level-1"></span> ต่ำกว่าเกณฑ์
+            </span>
+            <span class="calendar-legend-item">
+              <span class="calendar-legend-color yield-level-2"></span> ต่ำกว่าเกณฑ์มาก
+            </span>
+          </div>
+        </div>
+
+        <div id="yield-calendar-grid" class="calendar-grid">
+          <!-- JS จะสร้างช่องปฏิทินมาใส่ตรงนี้ -->
+        </div>
+      </div>
+
+      <!-- ขวาล่างใต้กราฟน้ำฝน -->
+      <div class="kpi-panel">
+        <div class="panel-title">สรุปสถานการณ์น้ำและผลผลิต</div>
+
+        <!-- แถวการ์ด KPI -->
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-title">
+              <div class="kpi-icon"></div>
+              <span>ปฏิทินการปลูก</span>
+            </div>
+            <div class="kpi-period" id="kpi-planting-period">
+              กำลังปลูก &nbsp; 1 - 10 พ.ย. 68
+            </div>
+          </div>
+
+          <div class="kpi-card kpi-card-number">
+            <div class="kpi-title">
+              <div class="kpi-icon" style="background:#0099ff;"></div>
+              <span>ปริมาณการขาดแคลนน้ำ<br />(หน่วย : ลบ.ม./ไร่)</span>
+            </div>
+            <div class="kpi-value" id="kpi-water-deficit">251</div>
+          </div>
+
+          <div class="kpi-card kpi-card-number">
+            <div class="kpi-title">
+              <div class="kpi-icon" style="background:#6f42c1;"></div>
+              <span>ความต้องการน้ำรวม<br />(หน่วย : ลบ.ม./ไร่)</span>
+            </div>
+            <div class="kpi-value" id="kpi-water-demand">1,321</div>
+          </div>
+
+          <div class="kpi-card kpi-card-number">
+            <div class="kpi-title">
+              <div class="kpi-icon" style="background:#006699;"></div>
+              <span>ปริมาณน้ำที่ใช้ได้<br />(หน่วย : ลบ.ม./ไร่)</span>
+            </div>
+            <div class="kpi-value" id="kpi-water-supply" style="color:#333;">1,069</div>
+          </div>
+
+          <!-- ต้นทุนผลผลิต -->
+          <div class="cost-card">
+            <div class="cost-header">
+              <div class="cost-icon"></div>
+              <div class="cost-title">ต้นทุนผลผลิต</div>
+            </div>
+
+            <div class="cost-bar-wrapper">
+              <div class="cost-bar-seg cost-green"></div>
+              <div class="cost-bar-seg cost-yellow"></div>
+              <div class="cost-bar-seg cost-red"></div>
+              <div class="cost-pointer"></div>
+            </div>
+
+            <div class="cost-label-row">
+              <div class="cost-label">ตามเกณฑ์</div>
+              <div class="cost-label">ต่ำกว่าเกณฑ์</div>
+              <div class="cost-label">ต่ำกว่าเกณฑ์มาก</div>
+            </div>
+          </div>
+        </div> <!-- ปิด .kpi-row -->
+
+        <!-- กราฟน้ำ 2 อัน อยู่แถวถัดลงมา -->
+        <div class="kpi-charts-wrapper">
+
+          <div class="kpi-chart-panel">
+            <div class="panel-title">
+              เปรียบเทียบความต้องการน้ำและปริมาณน้ำที่ใช้ได้ (หน่วย : ลบ.ม./ไร่)
+            </div>
+            <div class="kpi-chart-body">
+              <canvas id="waterCompareChart"></canvas>
+            </div>
+          </div>
+
+          <div class="kpi-chart-panel">
+            <div class="panel-title">
+              ปริมาณการขาดแคลนน้ำ (หน่วย : ลบ.ม./ไร่)
+            </div>
+            <div class="kpi-chart-body">
+              <canvas id="deficitChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      หมายเหตุ : หน้าจอนี้เป็นเพียงตัวอย่างเพื่อประกอบการออกแบบระบบเว็บ<br />
+      สามารถเชื่อมข้อมูลจริงด้วย JavaScript / API ภายหลังได้
+    </div>
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- JavaScript หลักที่แยกออกมา -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+
+</html>

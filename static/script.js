@@ -272,9 +272,20 @@ if (mapDiv) {
 
 // ===================== YIELD REDUCTION (ปฏิทิน + ต้นทุน) =====================
 
-async function loadYieldReduction() {
+async function loadYieldReduction(areaCode) {
+    areaCode = areaCode || currentAreaCode;
+
+    if (!areaCode) return;
+
     try {
-        const res = await fetch("/api/yield_reduction");
+        const params = new URLSearchParams({
+            area_code: areaCode,
+            rice_variety: currentRiceVariety,
+            planting_method: currentPlantingMethod
+            // ถ้าจะให้ผู้ใช้เลือกเดือนภายหลัง ค่อย append month_year เพิ่มได้
+        });
+
+        const res = await fetch(`/api/yield_reduction?${params.toString()}`);
         if (!res.ok) {
             throw new Error("HTTP status " + res.status);
         }
@@ -289,6 +300,7 @@ async function loadYieldReduction() {
         console.error("โหลดข้อมูล yield_reduction ไม่ได้:", err);
     }
 }
+
 
 function updateCostPointerFromYieldReduction(data) {
     const pointer = document.querySelector(".cost-pointer");
@@ -400,6 +412,8 @@ function renderYieldReductionCalendar(data) {
 const provinceSelect = document.getElementById("provinceSelect");
 const districtSelect = document.getElementById("districtSelect");
 const subdistrictSelect = document.getElementById("subdistrictSelect");
+const riceVarietySelect = document.getElementById("riceVarietySelect");
+const plantingMethodSelect = document.getElementById("plantingMethodSelect");
 
 let currentAmphoeMap = {};
 let currentAreaCode = "930606";  // ค่าเริ่มต้นตอนเปิดหน้า (พัทลุงที่ใช้ demo)
@@ -414,13 +428,21 @@ function formatDateForScenario(dateStr) {
 }
 
 // โหลดข้อมูล crop_calendar ตาม area_code แล้ววาดช่องรูปข้าว
-async function loadCropCalendar(areaCode) {
+async function loadCropCalendar(areaCode, riceVariety, plantingMethod) {
+    areaCode = areaCode || currentAreaCode;
+    riceVariety = riceVariety || currentRiceVariety;
+    plantingMethod = plantingMethod || currentPlantingMethod;
+
     if (!areaCode) return;
 
     try {
-        const res = await fetch(
-            `/api/crop_calendar?area_code=${encodeURIComponent(areaCode)}`
-        );
+        const params = new URLSearchParams({
+            area_code: areaCode,
+            rice_variety: riceVariety,
+            planting_method: plantingMethod
+        });
+
+        const res = await fetch(`/api/crop_calendar?${params.toString()}`);
         if (!res.ok) {
             throw new Error("HTTP " + res.status);
         }
@@ -429,13 +451,13 @@ async function loadCropCalendar(areaCode) {
         console.log("crop_calendar data:", data);
 
         renderRiceStageBar(data);
-        // 👉 ขยับต้นทุนผลผลิตตามข้อมูล dekad ของพื้นที่นี้
-        updateCostPointerFromYieldReduction(data);
+        updateCostPointerFromYieldReduction(data);   // ขยับ pointer ตาม dekad
 
     } catch (err) {
         console.error("โหลดข้อมูล crop_calendar ไม่ได้:", err);
     }
 }
+
 
 
 async function loadSubdistrictsForProvince(provinceName) {
@@ -493,20 +515,26 @@ function renderSubdistrictOptions(amphoeName) {
 
 // ===================== NEW: โหลด planting_scenario ตาม area_code =====================
 
-async function loadPlantingScenario(areaCode, dateOverride) {
+async function loadPlantingScenario(areaCode, dateOverride, riceVariety, plantingMethod) {
+    areaCode = areaCode || currentAreaCode;
+    riceVariety = riceVariety || currentRiceVariety;
+    plantingMethod = plantingMethod || currentPlantingMethod;
+
     if (!areaCode) return;
 
-    // เก็บค่า areaCode ปัจจุบันไว้ใช้เวลาเปลี่ยน dekad
     currentAreaCode = areaCode;
 
-    // ถ้ามี dateOverride ให้ส่งไปด้วย
-    let url = `/api/planting_scenario?area_code=${encodeURIComponent(areaCode)}`;
+    const params = new URLSearchParams({
+        area_code: areaCode,
+        rice_variety: riceVariety,
+        planting_method: plantingMethod
+    });
     if (dateOverride) {
-        url += `&date=${encodeURIComponent(dateOverride)}`;
+        params.append("date", dateOverride);
     }
 
     try {
-        const res = await fetch(url);
+        const res = await fetch(`/api/planting_scenario?${params.toString()}`);
         if (!res.ok) {
             throw new Error("HTTP " + res.status);
         }
@@ -514,7 +542,8 @@ async function loadPlantingScenario(areaCode, dateOverride) {
         const data = await res.json();
         console.log("planting_scenario data:", data);
 
-        // ---- (โค้ดเดิม: อัปเดต KPI + กราฟ) ----
+        // ... โค้ดเดิมอัปเดต KPI + กราฟ เหมือนเดิมทั้งหมด ...
+        // (ส่วนในไฟล์เธอตอนนี้ใช้ได้แล้ว แค่ไม่ลืมเก็บไว้เหมือนเดิม)
         const totalDemand = data.total_demand ?? 0;
         const totalSupply = data.total_supply ?? 0;
         const totalWB = data.total_water_balance ?? (totalDemand - totalSupply);
@@ -555,7 +584,6 @@ async function loadPlantingScenario(areaCode, dateOverride) {
     }
 }
 
-
 // ---------------------- EVENT LISTENERS ----------------------
 
 if (provinceSelect) {
@@ -583,25 +611,57 @@ if (subdistrictSelect) {
 
         currentAreaCode = areaCode;
 
-        // โหลดข้อมูลน้ำตามตำบล
+        // โหลดข้อมูลน้ำตามตำบล + ชนิดข้าว + วิธีปลูก
         loadPlantingScenario(areaCode);
-
-        // โหลด crop_calendar มาแสดงช่องรูปข้าว
         loadCropCalendar(areaCode);
+        loadYieldReduction(areaCode);
     });
+
+    if (riceVarietySelect) {
+        riceVarietySelect.addEventListener("change", (e) => {
+            currentRiceVariety = e.target.value;
+            console.log("เลือกชนิดข้าว =", currentRiceVariety);
+
+            if (!currentAreaCode) return;
+
+            loadPlantingScenario(currentAreaCode);
+            loadCropCalendar(currentAreaCode);
+            loadYieldReduction(currentAreaCode);
+        });
+    }
+
+    if (plantingMethodSelect) {
+        plantingMethodSelect.addEventListener("change", (e) => {
+            currentPlantingMethod = e.target.value;
+            console.log("เลือกวิธีปลูก =", currentPlantingMethod);
+
+            if (!currentAreaCode) return;
+
+            loadPlantingScenario(currentAreaCode);
+            loadCropCalendar(currentAreaCode);
+            loadYieldReduction(currentAreaCode);
+        });
+    }
+
 }
 
 
 // ===================== เมื่อโหลดหน้าเสร็จ =====================
 
 window.addEventListener("load", () => {
-    // โหลดปฏิทินความเสี่ยง
-    loadYieldReduction();
+    // sync state เริ่มต้นจากค่าใน dropdown
+    if (riceVarietySelect && riceVarietySelect.value) {
+        currentRiceVariety = riceVarietySelect.value;
+    }
+    if (plantingMethodSelect && plantingMethodSelect.value) {
+        currentPlantingMethod = plantingMethodSelect.value;
+    }
 
     // ค่าเริ่มต้น demo: พัทลุง 930606
     const defaultArea = "930606";
+    currentAreaCode = defaultArea;
 
+    loadYieldReduction(defaultArea);
     loadPlantingScenario(defaultArea);
     loadCropCalendar(defaultArea);
 });
-

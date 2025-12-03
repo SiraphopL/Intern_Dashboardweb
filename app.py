@@ -14,11 +14,17 @@ def home():
 
 @app.route("/api/yield_reduction")
 def yield_reduction():
+    # ดึงค่าจาก query (ถ้าไม่ส่งมาก็ใช้ค่า default เดิม)
+    area_code = request.args.get("area_code", "930606")
+    month_year = request.args.get("month_year", "09-2025")
+    rice_variety = request.args.get("rice_variety", "ข้าวกลาง")
+    planting_method = request.args.get("planting_method", "หว่านน้ำตม")
+
     payload = {
-        "area_code": "930606",
-        "month_year": "09-2025",
-        "rice_variety": "ข้าวกลาง",
-        "planting_method": "หว่านน้ำตม"
+        "area_code": area_code,
+        "month_year": month_year,
+        "rice_variety": rice_variety,
+        "planting_method": planting_method
     }
 
     url = "https://rice-planting-dot-thagri-portal-staging.as.r.appspot.com/yield_reduction_calendar"
@@ -31,6 +37,7 @@ def yield_reduction():
 
     data = r.json()
     return jsonify(data)
+
 
 
 @app.route("/api/subdistricts")

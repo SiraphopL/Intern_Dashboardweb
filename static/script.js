@@ -222,6 +222,7 @@ function renderRiceStageBar(data) {
 
         // event เมื่อกดแต่ละ dekad
         cell.addEventListener("click", () => {
+            updateCostPointerFromYieldReduction([item]);
             // เปลี่ยน active
             const all = riceStageBar.querySelectorAll(".icon-cell");
             all.forEach(c => c.classList.remove("active"));
@@ -428,6 +429,9 @@ async function loadCropCalendar(areaCode) {
         console.log("crop_calendar data:", data);
 
         renderRiceStageBar(data);
+        // 👉 ขยับต้นทุนผลผลิตตามข้อมูล dekad ของพื้นที่นี้
+        updateCostPointerFromYieldReduction(data);
+
     } catch (err) {
         console.error("โหลดข้อมูล crop_calendar ไม่ได้:", err);
     }

@@ -4,6 +4,11 @@ let rainChart = null;           // กราฟด้านบนสุด
 let waterCompareChart = null;   // กราฟล่างซ้าย
 let deficitChart = null;        // กราฟล่างขวา
 
+// ===================== GLOBAL MAP VARIABLES =====================
+
+let map = null;         // แผนที่ Leaflet
+let areaMarker = null;  // marker แสดงตำแหน่งพื้นที่ปลูก
+
 // ฟังก์ชัน format ตัวเลขเป็นรูปแบบไทย
 function formatNumberTH(value) {
     if (value === null || value === undefined || isNaN(value)) return "-";
@@ -162,7 +167,7 @@ function updateRainChart(labels, barValues, barColors, prevYear, avg15) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'ปริมาณน้ำฝน (หน่วย : มม./ไร่)'
+                        text: 'ปริมาณน้ำฝน (หน่วย : ลบ.ม./ไร่)'
                     }
                 }
             }
@@ -217,7 +222,7 @@ function drawFallbackRainChart() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'ปริมาณน้ำฝน (หน่วย : มม./ไร่)'
+                        text: 'ปริมาณน้ำฝน (หน่วย : ลบ.ม./ไร่)'
                     }
                 }
             }
@@ -466,18 +471,46 @@ const mapDiv = document.getElementById('map');
 if (mapDiv) {
     const centerLatLng = [7.617, 100.077];
 
-    const map = L.map('map').setView(centerLatLng, 11);
+    // ใช้ตัวแปร global แทน const local
+    map = L.map('map').setView(centerLatLng, 11);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    L.marker(centerLatLng)
+    // เก็บ marker ไว้ในตัวแปร global เพื่อนำไปขยับทีหลัง
+    areaMarker = L.marker(centerLatLng)
         .addTo(map)
-        .bindPopup('พื้นที่ตัวอย่างปลูกข้าว<br>อ.เมือง จ.พัทลุง')
+        // .bindPopup('พื้นที่ตัวอย่างปลูกข้าว<br>อ.เมือง จ.พัทลุง')
         .openPopup();
 }
+
+function updateMapFromRainForecast(data) {
+    // กันพลาด ถ้า map ยังไม่ถูกสร้างขึ้น หรือไม่มี data
+    if (!map || !data) return;
+
+    const lat = data.lat;
+    const lon = data.lon;
+
+    // ตรวจว่ามี lat/lon เป็นตัวเลขจริง ๆ
+    if (typeof lat !== "number" || typeof lon !== "number") {
+        console.warn("rain_forecast: ไม่มี lat/lon หรือไม่ใช่ตัวเลข", lat, lon);
+        return;
+    }
+
+    // ถ้ายังไม่มี marker ให้สร้างใหม่
+    if (!areaMarker) {
+        areaMarker = L.marker([lat, lon]).addTo(map);
+    } else {
+        // ถ้ามีแล้ว ขยับตำแหน่ง
+        areaMarker.setLatLng([lat, lon]);
+    }
+
+    // เลื่อนมุมมองแผนที่ไปยังตำแหน่งนั้น
+    map.setView([lat, lon], 11);    // จะเพิ่ม/ลด zoom level ก็ปรับเลขนี้ได้
+}
+
 
 // ===================== YIELD REDUCTION (ปฏิทิน + ต้นทุน) =====================
 
@@ -901,6 +934,9 @@ async function loadRainForecast(areaCode) {
 
         const data = await res.json();
         console.log("rain_forecast data:", data);
+
+        // ⭐ อัปเดตแผนที่จาก lat/lon ที่ได้มาจาก API
+        updateMapFromRainForecast(data);
 
         if (!data || !data.rainfall_data) {
             drawFallbackRainChart();

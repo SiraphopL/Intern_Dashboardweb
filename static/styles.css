@@ -12,14 +12,16 @@ body {
 /* ------------------ MAIN WRAPPER ------------------ */
 .page {
   max-width: 1680px;
-  /* เดิม fix 1680px → ใช้เป็น max แทน */
   width: 100%;
   margin: 0 auto;
   background: #ffffff;
   min-height: 950px;
   border-left: 1px solid #ccc;
   border-right: 1px solid #ccc;
+  /* เอา overflow-x ออก หรือจะใส่เป็น visible ก็ได้ */
+  overflow-x: visible;
 }
+
 
 /* ================= HEADER ================= */
 .header {
@@ -175,7 +177,8 @@ body {
   display: flex;
   flex-direction: column;
   /* แก้ตรงนี้: ให้ยืดเต็มแทนที่จะจัดกลาง */
-  align-items: stretch;   /* หรือจะลบทั้งบรรทัดนี้ก็ได้ */
+  align-items: stretch;
+  /* หรือจะลบทั้งบรรทัดนี้ก็ได้ */
 }
 
 .chart-legend {
@@ -211,42 +214,43 @@ body {
 .rain-chart-body {
   flex: 1 1 auto;
   min-height: 0;
-  /* เดิม: margin: 4px 6px 0; → ไม่เอา 6px ซ้ายขวาแล้ว */
-  margin: 4px 0 0;
+  /* ให้มี margin ซ้ายขวานิดหน่อย */
+  margin: 4px 6px 0;
   border: 1px solid #d0d0d0;
   padding: 6px 0;
-
-  /* 👇 ให้กราฟกว้างสุดไม่เกิน 1100px และชิดกลาง panel */
+  /* ใช้เต็มความกว้าง panel ไปเลย */
   width: 100%;
-  max-width: 1100px;
+  /* ลบ max-width: 1100px; ทิ้ง */
+  position: relative;
+  overflow: hidden;
+  /* ถ้า canvas กว้างเกินให้ตัดในกรอบ */
 }
 
-
 .rain-chart-body canvas {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  /* กันไม่ให้กว้างกว่า container */
 }
 
 /* ========== SMALL ICON BAR (ช่วงรูปข้าว) ========== */
 /* แถวรูปข้าวใต้กราฟ */
 .icon-bar {
-  /* เดิม: margin: 0 6px 4px; */
-  margin: 0 0 4px;
-
+  margin: 0 6px 4px;
   display: grid;
   border: 1px solid #b3b3b3;
   border-top: none;
   height: 42px;
   background: #ffffff;
   box-sizing: border-box;
-
-  /* 👇 ให้แถวรูปข้าวกว้างสุดเท่ากับกราฟ และชิดกลางด้วย */
   width: 100%;
-  max-width: 1100px;
+  /* ลบ max-width: 1100px; ทิ้ง */
+  overflow: hidden;
 }
+
 
 .icon-cell {
   border-right: 1px solid #dddddd;
+  border-left: 1px solid #dddddd;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -257,9 +261,9 @@ body {
   background: #ffffff;
 }
 
-.icon-cell:last-child {
+/* .icon-cell:last-child {
   border-right: none;
-}
+} */
 
 .icon-cell:hover {
   background: #fffbe6;
@@ -272,24 +276,21 @@ body {
 
 /* สีช่องรูปข้าวตามระดับผลผลิต */
 .icon-cell.level-0 {
-  background: #00a651;
   color: #fff;
 }
 
 .icon-cell.level-1 {
-  background: #f7e08b;
   color: #000;
 }
 
 .icon-cell.level-2 {
-  background: #e84c3d;
   color: #fff;
 }
 
 /* เน้น dekad ที่เป็นช่วงปลูก */
-.icon-cell.planting {
+/* .icon-cell.planting {
   border-bottom: 3px solid #2f6b2f;
-}
+} */
 
 /* active ทับสีเดิมนิดหน่อย แต่ยังเห็นโทน */
 .icon-cell.active {
@@ -305,7 +306,8 @@ body {
 
 .kpi-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* ทั้ง 5 ใบกว้างเท่ากัน */
   gap: 6px;
   margin: 6px 16px 0;
 }
@@ -319,6 +321,7 @@ body {
   justify-content: space-between;
   padding: 4px 6px;
   font-size: 12px;
+  min-width: 0;
 }
 
 .kpi-title {
@@ -326,6 +329,10 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-bottom: 2px;
+
+  /* เสริมได้ถ้าหัวข้อยาวมาก */
+  white-space: normal;
 }
 
 .kpi-icon {
@@ -343,13 +350,122 @@ body {
   padding-right: 2px;
 }
 
+/* ปรับแถบช่วงปลูกให้กระทัดรัด + อยู่บรรทัดเดียว */
 .kpi-period {
   text-align: center;
-  font-size: 14px;
+  font-size: 11px;
+  /* เล็กลงนิดหน่อย */
   font-weight: 700;
   background: #fce6b2;
-  padding: 4px 0;
-  margin-top: 3px;
+  padding: 2px 4px;
+  margin-top: 2px;
+
+  /* 🔒 บรรทัดเดียว ไม่ห่อบรรทัดใหม่ */
+  white-space: nowrap;
+  overflow: hidden;
+  /* ถ้าแคบมากจะถูกตัดในกรอบ */
+  text-overflow: ellipsis;
+  /* แสดง ... ตอนกรอบแคบ */
+}
+
+/* ===== ปรับแถวสรุปสถานการณ์น้ำให้แน่น และตัวเลขขึ้นข้างข้อความ ===== */
+
+/* ลดช่องว่างรอบ ๆ แถวการ์ดใน panel ขวาล่าง */
+.kpi-panel .kpi-row {
+  margin: 2px 6px 2px;
+  gap: 4px;
+}
+
+/* การ์ดพื้นฐาน: เตี้ยลง ไม่เว้นบน–ล่างเยอะ */
+.kpi-card {
+  height: 70px;
+  /* เดิม 80px */
+  padding: 4px 6px 3px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  /* ไม่ใช้ space-between แล้ว */
+  font-size: 12px;
+}
+
+.kpi-title {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+/* การ์ดที่มีตัวเลข (ข้อ 2–4) → เรียงแนวนอน: ไอคอน+ข้อความซ้าย / ตัวเลขขวา */
+.kpi-card-number {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.kpi-card-number .kpi-title {
+  margin-bottom: 0;
+}
+
+.kpi-card-number .kpi-value {
+  font-size: 18px;
+  /* เล็กลงนิดให้ไม่ดันพื้นที่ */
+  font-weight: 700;
+  text-align: right;
+  padding-right: 2px;
+  margin-left: auto;
+  /* ดันไปชิดขวาการ์ด */
+}
+
+/* panel ฝั่งขวาใต้กราฟน้ำฝน */
+.kpi-panel {
+  border: 1px solid #b3b3b3;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  /* กันโดนตัดเวลา layout แกว่ง */
+}
+
+/* ให้กินความสูงเท่ากับ calendar-panel ในแถวเดียวกัน */
+.main-lower .kpi-panel {
+  height: 100%;
+}
+
+/* ขยับ kpi-row ข้างในให้มี margin นิดหน่อย */
+.kpi-panel .kpi-row {
+  margin: 4px 6px 6px;
+}
+
+/* ===== KPI PANEL → CHARTS ===== */
+.kpi-charts-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 6px 10px;
+}
+
+.kpi-chart-panel {
+  border: 1px solid #b3b3b3;
+  background: #fff;
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-chart-body {
+  flex: 1;
+  margin: 4px 6px 6px;
+  border: 1px solid #d0d0d0;
+  padding: 6px;
+  overflow: hidden;
+  /* กันไม่ให้ canvas โผล่เกินกรอบ */
+}
+
+.kpi-chart-body canvas {
+  width: 100% !important;
+  /* ยึดเท่ากรอบเสมอ */
+  max-width: 100% !important;
+  height: 100%;
 }
 
 /* ===== ต้นทุนผลผลิต แบบตามรูปตัวอย่าง ===== */
@@ -362,6 +478,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  min-width: 0;
 }
 
 .cost-header {
@@ -739,52 +856,6 @@ body {
   align-items: stretch;
 }
 
-/* panel ฝั่งขวาใต้กราฟน้ำฝน */
-.kpi-panel {
-  border: 1px solid #b3b3b3;
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ให้กินความสูงเท่ากับ calendar-panel ในแถวเดียวกัน */
-.main-lower .kpi-panel {
-  height: 100%;
-}
-
-/* ขยับ kpi-row ข้างในให้มี margin นิดหน่อย */
-.kpi-panel .kpi-row {
-  margin: 4px 6px 6px;
-}
-
-/* ===== KPI PANEL → CHARTS ===== */
-.kpi-charts-wrapper {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 10px 6px 10px;
-}
-
-.kpi-chart-panel {
-  border: 1px solid #b3b3b3;
-  background: #fff;
-  height: 320px;
-  display: flex;
-  flex-direction: column;
-}
-
-.kpi-chart-body {
-  flex: 1;
-  margin: 4px 6px 6px;
-  border: 1px solid #d0d0d0;
-  padding: 6px;
-}
-
-.kpi-chart-body canvas {
-  width: 100%;
-  height: 100%;
-}
-
 /* 📱 Responsive */
 @media (max-width: 1200px) {
   .kpi-charts-wrapper {
@@ -792,63 +863,6 @@ body {
   }
 }
 
-/* ===== ปรับแถวสรุปสถานการณ์น้ำให้แน่น และตัวเลขขึ้นข้างข้อความ ===== */
-
-/* ลดช่องว่างรอบ ๆ แถวการ์ดใน panel ขวาล่าง */
-.kpi-panel .kpi-row {
-  margin: 2px 6px 2px;
-  gap: 4px;
-}
-
-/* การ์ดพื้นฐาน: เตี้ยลง ไม่เว้นบน–ล่างเยอะ */
-.kpi-card {
-  height: 70px;
-  /* เดิม 80px */
-  padding: 4px 6px 3px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  /* ไม่ใช้ space-between แล้ว */
-  font-size: 12px;
-}
-
-.kpi-title {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-
-/* ปรับแถบช่วงปลูกให้กระทัดรัด */
-.kpi-period {
-  text-align: center;
-  font-size: 13px;
-  font-weight: 700;
-  background: #fce6b2;
-  padding: 2px 0;
-  margin-top: 2px;
-}
-
-/* การ์ดที่มีตัวเลข (ข้อ 2–4) → เรียงแนวนอน: ไอคอน+ข้อความซ้าย / ตัวเลขขวา */
-.kpi-card-number {
-  flex-direction: row;
-  align-items: flex-start;
-}
-
-.kpi-card-number .kpi-title {
-  margin-bottom: 0;
-}
-
-.kpi-card-number .kpi-value {
-  font-size: 18px;
-  /* เล็กลงนิดให้ไม่ดันพื้นที่ */
-  font-weight: 700;
-  text-align: right;
-  padding-right: 2px;
-  margin-left: auto;
-  /* ดันไปชิดขวาการ์ด */
-}
 
 /* ปรับต้นทุนผลผลิตให้แน่นขึ้นด้วย */
 .cost-card {

@@ -52,7 +52,7 @@ function buildRainChart(labels, demand, supply) {
                 maintainAspectRatio: false,
                 plugins: { legend: { position: 'top' } },
                 scales: {
-                    x: { grid: { display: false } },
+                    x: { grid: { display: false }, offset: false },
                     y: {
                         beginAtZero: true,
                         title: { display: true, text: 'ลบ.ม./ไร่' }
@@ -64,6 +64,167 @@ function buildRainChart(labels, demand, supply) {
 
     setTimeout(syncRiceBarToChart, 0);
 }
+
+// วาดกราฟปริมาณน้ำฝน (แท่ง + เส้น)
+function updateRainChart(labels, barValues, barColors, prevYear, avg15) {
+    const ctx = document.getElementById('rainChart').getContext('2d');
+    const n = labels.length || 0;
+
+    function norm(arr) {
+        if (!Array.isArray(arr)) return new Array(n).fill(0);
+        if (arr.length !== n) return new Array(n).fill(0);
+        return arr.map(v => {
+            const num = Number(v);
+            return Number.isFinite(num) ? num : 0;
+        });
+    }
+
+    barValues = norm(barValues);
+    barColors = Array.isArray(barColors) && barColors.length === n
+        ? barColors
+        : new Array(n).fill('#5b9bd5');
+
+    prevYear = norm(prevYear);
+    avg15 = norm(avg15);
+
+    // เช็กว่า rainChart ที่มีอยู่ “โครงสร้างพร้อมใช้” ไหม (ต้องมี 3 datasets)
+    const canReuse =
+        rainChart &&
+        rainChart.data &&
+        Array.isArray(rainChart.data.datasets) &&
+        rainChart.data.datasets.length >= 3;
+
+    if (canReuse) {
+        // อัปเดตกราฟเดิม
+        rainChart.data.labels = labels;
+        rainChart.data.datasets[0].data = barValues;
+        rainChart.data.datasets[0].backgroundColor = barColors;
+        rainChart.data.datasets[1].data = prevYear;
+        rainChart.data.datasets[2].data = avg15;
+        rainChart.update();
+
+        setTimeout(syncRiceBarToChart, 0);
+        return;
+    }
+
+    // ถ้ามีกราฟแต่โครงสร้างไม่ตรง (เช่นมาจาก drawFallbackRainChart / buildRainChart)
+    if (rainChart) {
+        rainChart.destroy();
+        rainChart = null;
+    }
+
+    // สร้างกราฟใหม่ให้มี 3 datasets เสมอ
+    rainChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'ปริมาณน้ำฝน (ค่าจริง / คาดการณ์ / ปัจจุบัน)',
+                    data: barValues,
+                    backgroundColor: barColors,
+                    maxBarThickness: 40
+                },
+                {
+                    type: 'line',
+                    label: 'ปริมาณน้ำฝนปีก่อน',
+                    data: prevYear,
+                    borderColor: '#f4a22b',
+                    backgroundColor: '#f4a22b',
+                    tension: 0.3,
+                    fill: false,
+                    spanGaps: true   // ข้ามค่าที่เป็น null
+                },
+                {
+                    type: 'line',
+                    label: 'ค่าเฉลี่ยน้ำฝน 15 ปี',
+                    data: avg15,
+                    borderColor: '#7f7f7f',
+                    backgroundColor: '#7f7f7f',
+                    tension: 0.3,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'false' }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    offset: false        // ให้แท่ง/ช่องข้าวเรียงพอดีขอบ
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'ปริมาณน้ำฝน (หน่วย : มม./ไร่)'
+                    }
+                }
+            }
+        }
+    });
+
+    setTimeout(syncRiceBarToChart, 0);
+}
+
+
+// วาดกราฟ fallback เวลาโหลดข้อมูลฝนไม่ได้ / API error
+function drawFallbackRainChart() {
+    const canvas = document.getElementById('rainChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    // ถ้ามีกราฟอยู่แล้ว ให้เคลียร์ข้อมูลแล้วอัปเดตเป็นค่าว่าง
+    if (rainChart) {
+        rainChart.data.labels = [];
+        rainChart.data.datasets.forEach(ds => {
+            ds.data = [];
+        });
+        rainChart.update();
+        return;
+    }
+
+    // ถ้ายังไม่เคยมีกราฟ สร้างกราฟเปล่า ๆ ไว้
+    rainChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'ปริมาณน้ำฝน (ไม่มีข้อมูล)',
+                    data: [],
+                    backgroundColor: '#5b9bd5',
+                    maxBarThickness: 40
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'ปริมาณน้ำฝน (หน่วย : มม./ไร่)'
+                    }
+                }
+            }
+        }
+    });
+}
+
 
 function buildWaterCompareChart(labels, demand, supply) {
     const ctx = document.getElementById('waterCompareChart').getContext('2d');
@@ -100,7 +261,16 @@ function buildWaterCompareChart(labels, demand, supply) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'top' } },
+                plugins: {
+                    legend: { position: 'top' },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        color: '#000',
+                        font: { size: 10 },
+                        formatter: (v) => v.toFixed(0)
+                    }
+                },
                 scales: {
                     x: { grid: { display: false } },
                     y: {
@@ -108,10 +278,13 @@ function buildWaterCompareChart(labels, demand, supply) {
                         title: { display: true, text: 'ลบ.ม./ไร่' }
                     }
                 }
-            }
+            },
+            plugins: [ChartDataLabels]
+
         });
     }
 }
+
 
 function buildDeficitChart(labels, demand, supply) {
     const ctx = document.getElementById('deficitChart').getContext('2d');
@@ -142,7 +315,16 @@ function buildDeficitChart(labels, demand, supply) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'top' } },
+                plugins: {
+                    legend: { position: 'top' },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        color: '#000',
+                        font: { size: 10 },
+                        formatter: (v) => v.toFixed(0)
+                    }
+                },
                 scales: {
                     x: {
                         grid: { display: false },
@@ -154,7 +336,9 @@ function buildDeficitChart(labels, demand, supply) {
                         title: { display: true, text: 'ลบ.ม./ไร่' }
                     }
                 }
-            }
+            },
+            plugins: [ChartDataLabels]
+
         });
     }
 }
@@ -170,10 +354,9 @@ function syncRiceBarToChart() {
     const canvasRect = rainChart.canvas.getBoundingClientRect();
     const leftPadding = ca.left - canvasRect.left;
 
-    // ให้เริ่มตรงกับกราฟด้านซ้าย
-    riceStageBar.style.paddingLeft = leftPadding + 'px';
-    // ด้านขวาชิดกรอบไปเลย
-    riceStageBar.style.paddingRight = '0px';
+    // ใช้ระยะคงที่ ไม่อิง chartArea แล้ว จะได้ไม่วิ่งไปวิ่งมาเวลา resize/zoom
+    riceStageBar.style.paddingLeft = "48px";  // ถ้าอยากขยับอีกนิดค่อยปรับเลขนี้
+    riceStageBar.style.paddingRight = "8px";
 }
 
 window.addEventListener('resize', syncRiceBarToChart);
@@ -189,18 +372,30 @@ function renderRiceStageBar(data) {
     riceStageBar.innerHTML = "";
     if (!Array.isArray(data) || data.length === 0) return;
 
+    const plantingCells = [];  // เก็บ cell ที่เป็นช่วงปลูกไว้เผื่อใช้ set active เริ่มต้น
+
     data.forEach((item, index) => {
         const cell = document.createElement("div");
         cell.className = "icon-cell";
-        cell.textContent = "🌾";
+
+        const isPlanting = !!item.is_planting_period;
 
         cell.dataset.index = index;
         cell.dataset.dekad = item.dekad;
         cell.dataset.dekadLabel = item.dekad_label || "";
         cell.dataset.dateStart = item.date_start || "";
         cell.dataset.dateEnd = item.date_end || "";
-        cell.dataset.isPlanting = item.is_planting_period ? "1" : "0";
+        cell.dataset.isPlanting = isPlanting ? "1" : "0";
         cell.dataset.yieldLevel = item.yield_reduction_level ?? "";
+
+        // แสดงไอคอนข้าวเฉพาะ dekad ที่เป็นช่วงปลูก
+        if (isPlanting) {
+            cell.textContent = "🌾";
+            plantingCells.push(cell);
+        } else {
+            cell.textContent = "";           // ช่องว่าง
+            cell.classList.add("no-crop");   // ไว้เผื่ออยากแต่งสีจาง ๆ ทีหลัง
+        }
 
         // tooltip
         const rangeText = item.date_start && item.date_end
@@ -209,8 +404,8 @@ function renderRiceStageBar(data) {
         const descText = item.yield_reduction_desc || "";
         cell.title = `${item.dekad_label || ""}\n${rangeText}\n${descText}`.trim();
 
-        // แสดงช่วงที่เป็น "ช่วงปลูก" ให้เด่นขึ้น
-        if (item.is_planting_period) {
+        // เน้นช่วงปลูกด้วยเส้นใต้ (ถ้าพี่เลี้ยงชอบ)
+        if (isPlanting) {
             cell.classList.add("planting");
         }
 
@@ -220,36 +415,50 @@ function renderRiceStageBar(data) {
         else if (lvl === 1) cell.classList.add("level-1");
         else if (lvl === 2) cell.classList.add("level-2");
 
-        // event เมื่อกดแต่ละ dekad
+        // ✅ ให้ "คลิกได้ทุก dekad" ทั้ง 36 ช่อง (ไม่ต้องมี if(isPlanting) แล้ว)
         cell.addEventListener("click", () => {
+            // ขยับ pointer ตาม dekad ที่คลิก (ใช้ level จาก crop_calendar)
             updateCostPointerFromYieldReduction([item]);
+
             // เปลี่ยน active
             const all = riceStageBar.querySelectorAll(".icon-cell");
             all.forEach(c => c.classList.remove("active"));
             cell.classList.add("active");
 
-            // เรียก planting_scenario ตาม dekad นี้ (ใช้ date_start)
+            // date สำหรับ planting_scenario (dd-mm-yyyy)
             const dateScenario = formatDateForScenario(item.date_start);
+            // month_year สำหรับ yield_reduction_calendar (mm-yyyy)
+            const monthYear = extractMonthYear(item.date_start);
+
             if (currentAreaCode) {
+                // อัปเดตกราฟสถานการณ์น้ำตาม dekad ที่เลือก
                 loadPlantingScenario(currentAreaCode, dateScenario);
+
+                // อัปเดตปฏิทินระดับความเสี่ยงตามเดือนของ dekad ที่คลิก
+                if (monthYear) {
+                    loadYieldReduction(currentAreaCode, monthYear);
+                } else {
+                    loadYieldReduction(currentAreaCode);
+                }
             }
         });
 
         riceStageBar.appendChild(cell);
     });
 
-    // ปรับ grid ให้มีคอลัมน์เท่าจำนวน dekad
+    // ปรับ grid ให้มีคอลัมน์เท่าจำนวน dekad ทั้งปี (36 ช่อง)
     riceStageBar.style.gridTemplateColumns = `repeat(${data.length}, 1fr)`;
 
-    // mark อันแรกเป็น active เริ่มต้น
-    const firstCell = riceStageBar.querySelector(".icon-cell");
-    if (firstCell) {
-        firstCell.classList.add("active");
+    // ตั้ง active เริ่มต้น = ช่องแรกที่เป็นช่วงปลูก (ถ้ามี)
+    const firstActive = plantingCells[0] || riceStageBar.querySelector(".icon-cell");
+    if (firstActive) {
+        firstActive.classList.add("active");
     }
 
     // sync ตำแหน่งกับกราฟ
     setTimeout(syncRiceBarToChart, 0);
 }
+
 
 // ===================== LEAFLET MAP =====================
 
@@ -272,7 +481,8 @@ if (mapDiv) {
 
 // ===================== YIELD REDUCTION (ปฏิทิน + ต้นทุน) =====================
 
-async function loadYieldReduction(areaCode) {
+// เพิ่มพารามิเตอร์ monthYearOverride (เช่น "09-2025")
+async function loadYieldReduction(areaCode, monthYearOverride) {
     areaCode = areaCode || currentAreaCode;
 
     if (!areaCode) return;
@@ -282,8 +492,12 @@ async function loadYieldReduction(areaCode) {
             area_code: areaCode,
             rice_variety: currentRiceVariety,
             planting_method: currentPlantingMethod
-            // ถ้าจะให้ผู้ใช้เลือกเดือนภายหลัง ค่อย append month_year เพิ่มได้
         });
+
+        // ถ้ามีส่ง monthYearOverride มาด้วย ให้ส่งขึ้น backend เป็น month_year
+        if (monthYearOverride) {
+            params.append("month_year", monthYearOverride);
+        }
 
         const res = await fetch(`/api/yield_reduction?${params.toString()}`);
         if (!res.ok) {
@@ -300,6 +514,7 @@ async function loadYieldReduction(areaCode) {
         console.error("โหลดข้อมูล yield_reduction ไม่ได้:", err);
     }
 }
+
 
 
 function updateCostPointerFromYieldReduction(data) {
@@ -416,7 +631,7 @@ const riceVarietySelect = document.getElementById("riceVarietySelect");
 const plantingMethodSelect = document.getElementById("plantingMethodSelect");
 
 let currentAmphoeMap = {};
-let currentAreaCode = "930606";  // ค่าเริ่มต้นตอนเปิดหน้า (พัทลุงที่ใช้ demo)
+let currentAreaCode = "";  // ค่าเริ่มต้นตอนเปิดหน้า (พัทลุงที่ใช้ demo)
 
 // helper แปลง '2025-09-11' -> '11-09-2025' สำหรับ planting_scenario
 function formatDateForScenario(dateStr) {
@@ -426,6 +641,16 @@ function formatDateForScenario(dateStr) {
     const [y, m, d] = parts;
     return `${d}-${m}-${y}`;
 }
+
+// helper แปลง '2025-09-11' -> '09-2025' สำหรับ yield_reduction_calendar
+function extractMonthYear(dateStr) {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return "";
+    const [y, m, d] = parts;   // รูปแบบเดิมคือ YYYY-MM-DD
+    return `${m}-${y}`;        // แปลงเป็น MM-YYYY ให้ตรงกับ backend
+}
+
 
 // โหลดข้อมูล crop_calendar ตาม area_code แล้ววาดช่องรูปข้าว
 async function loadCropCalendar(areaCode, riceVariety, plantingMethod) {
@@ -575,7 +800,7 @@ async function loadPlantingScenario(areaCode, dateOverride, riceVariety, plantin
             return "";
         });
 
-        buildRainChart(labels, demand, supply);
+        //buildRainChart(labels, demand, supply);
         buildWaterCompareChart(labels, demand, supply);
         buildDeficitChart(labels, demand, supply);
 
@@ -604,6 +829,7 @@ if (districtSelect) {
     });
 }
 
+// เปลี่ยนตำบล
 if (subdistrictSelect) {
     subdistrictSelect.addEventListener("change", (e) => {
         const areaCode = e.target.value;
@@ -611,45 +837,164 @@ if (subdistrictSelect) {
 
         currentAreaCode = areaCode;
 
-        // โหลดข้อมูลน้ำตามตำบล + ชนิดข้าว + วิธีปลูก
+        // โหลดข้อมูลตามตำบลใหม่ + ชนิดข้าว + วิธีปลูก
+        loadRainForecast(areaCode);
         loadPlantingScenario(areaCode);
         loadCropCalendar(areaCode);
         loadYieldReduction(areaCode);
     });
+}
 
-    if (riceVarietySelect) {
-        riceVarietySelect.addEventListener("change", (e) => {
-            currentRiceVariety = e.target.value;
-            console.log("เลือกชนิดข้าว =", currentRiceVariety);
+// เปลี่ยนชนิดข้าว
+if (riceVarietySelect) {
+    riceVarietySelect.addEventListener("change", (e) => {
+        currentRiceVariety = e.target.value;
+        console.log("เลือกชนิดข้าว =", currentRiceVariety);
 
-            if (!currentAreaCode) return;
+        if (!currentAreaCode) return;
 
-            loadPlantingScenario(currentAreaCode);
-            loadCropCalendar(currentAreaCode);
-            loadYieldReduction(currentAreaCode);
+        loadRainForecast(currentAreaCode);
+        loadPlantingScenario(currentAreaCode);
+        loadCropCalendar(currentAreaCode);
+        loadYieldReduction(currentAreaCode);
+    });
+}
+
+// เปลี่ยนวิธีปลูก
+if (plantingMethodSelect) {
+    plantingMethodSelect.addEventListener("change", (e) => {
+        currentPlantingMethod = e.target.value;
+        console.log("เลือกวิธีปลูก =", currentPlantingMethod);
+
+        if (!currentAreaCode) return;
+
+        loadRainForecast(currentAreaCode);
+        loadPlantingScenario(currentAreaCode);
+        loadCropCalendar(currentAreaCode);
+        loadYieldReduction(currentAreaCode);
+    });
+}
+
+// โหลดข้อมูลปริมาณน้ำฝน แล้วอัปเดตกราฟด้านบนสุด
+// โหลดข้อมูลปริมาณน้ำฝน แล้วอัปเดตกราฟด้านบนสุด
+// โหลดข้อมูลปริมาณน้ำฝน แล้วอัปเดตกราฟด้านบนสุด
+// โหลดข้อมูลปริมาณน้ำฝน แล้วอัปเดตกราฟด้านบนสุด
+async function loadRainForecast(areaCode) {
+    areaCode = areaCode || currentAreaCode;
+    if (!areaCode) return;
+
+    try {
+        const params = new URLSearchParams({
+            area_code: areaCode,
+            date: "01-06-2025",          // ไว้เดี๋ยวค่อยปรับทีหลัง
+            rice_variety: currentRiceVariety,
+            planting_method: currentPlantingMethod
         });
+
+        const res = await fetch(`/api/rain_forecast?${params.toString()}`);
+
+        if (!res.ok) {
+            console.error("rain_forecast HTTP status:", res.status);
+            drawFallbackRainChart();
+            return;
+        }
+
+        const data = await res.json();
+        console.log("rain_forecast data:", data);
+
+        if (!data || !data.rainfall_data) {
+            drawFallbackRainChart();
+            return;
+        }
+
+        const rf = data.rainfall_data;
+
+        // ---------- labels 36 dekad ----------
+        const labels = Array.isArray(rf.time_line) ? rf.time_line : [];
+        if (!labels.length) {
+            drawFallbackRainChart();
+            return;
+        }
+        const n = labels.length;
+
+        // helper ให้ array ยาว n และเป็นตัวเลข
+        function norm(arr) {
+            const out = new Array(n).fill(0);
+            if (!Array.isArray(arr)) return out;
+
+            for (let i = 0; i < n; i++) {
+                const raw = arr[i];
+                const num = Number(raw);        // แปลง "25" -> 25
+                out[i] = Number.isFinite(num) ? num : 0;
+            }
+            return out;
+        }
+
+        // ---------- current dekad index ----------
+        const currentLabel =
+            data.current_dakad_label ||
+            data.current_dekad_label ||
+            rf.current_dakad_label ||
+            rf.current_dekad_label ||
+            "";
+
+        let currentIndex = -1;
+        if (currentLabel) {
+            currentIndex = labels.indexOf(currentLabel);
+        }
+
+        console.log("labels:", labels);
+        console.log("currentLabel:", currentLabel, "currentIndex:", currentIndex);
+
+        // ---------- สร้างค่าแท่งจาก rainfall ----------
+        const rainfallArr = Array.isArray(rf.rainfall) ? rf.rainfall : [];
+        const barValues = new Array(n).fill(0);
+        const barColors = new Array(n).fill("#5b9bd5");   // เริ่มต้น = คาดการณ์
+
+        for (let i = 0; i < n; i++) {
+            const item = rainfallArr[i] || {};
+            const val = (typeof item.precipitation === "number" && !isNaN(item.precipitation))
+                ? item.precipitation
+                : 0;
+            barValues[i] = val;
+
+            let color = "#5b9bd5"; // คาดการณ์
+            if (currentIndex >= 0) {
+                if (i < currentIndex) {
+                    // ก่อนปัจจุบัน = ค่าจริง (น้ำเงินเข้ม)
+                    color = "#1f4e79";
+                } else if (i === currentIndex) {
+                    // ปัจจุบัน = แท่งสีฟ้า
+                    color = "#00b0f0";
+                } else {
+                    // หลังปัจจุบัน = คาดการณ์ (น้ำเงินกลาง)
+                    color = "#5b9bd5";
+                }
+            }
+            barColors[i] = color;
+        }
+
+        // ---------- เส้นปีก่อน + เส้นเฉลี่ย 15 ปี ----------
+        const prevYearArr = norm(rf.last_year_rainfall || []);
+        const avg15Arr = norm(rf.avg_15yrs || []);
+
+        console.log("barValues :", barValues);
+        console.log("prevYearArr:", prevYearArr);
+        console.log("avg15Arr   :", avg15Arr);
+
+        // วาดกราฟ
+        updateRainChart(labels, barValues, barColors, prevYearArr, avg15Arr);
+
+    } catch (err) {
+        console.error("โหลด rain forecast ไม่ได้:", err);
+        drawFallbackRainChart();
     }
-
-    if (plantingMethodSelect) {
-        plantingMethodSelect.addEventListener("change", (e) => {
-            currentPlantingMethod = e.target.value;
-            console.log("เลือกวิธีปลูก =", currentPlantingMethod);
-
-            if (!currentAreaCode) return;
-
-            loadPlantingScenario(currentAreaCode);
-            loadCropCalendar(currentAreaCode);
-            loadYieldReduction(currentAreaCode);
-        });
-    }
-
 }
 
 
 // ===================== เมื่อโหลดหน้าเสร็จ =====================
 
 window.addEventListener("load", () => {
-    // sync state เริ่มต้นจากค่าใน dropdown
     if (riceVarietySelect && riceVarietySelect.value) {
         currentRiceVariety = riceVarietySelect.value;
     }
@@ -657,11 +1002,10 @@ window.addEventListener("load", () => {
         currentPlantingMethod = plantingMethodSelect.value;
     }
 
-    // ค่าเริ่มต้น demo: พัทลุง 930606
-    const defaultArea = "930606";
-    currentAreaCode = defaultArea;
+    // ถ้าอยาก preload รายชื่ออำเภอ/ตำบลของจังหวัดเริ่มต้น จะเรียกเฉพาะ subdistricts ก็ได้
+    if (provinceSelect && provinceSelect.value) {
+        loadSubdistrictsForProvince(provinceSelect.value);
+    }
 
-    loadYieldReduction(defaultArea);
-    loadPlantingScenario(defaultArea);
-    loadCropCalendar(defaultArea);
+    // ❌ ไม่ต้องเรียก loadRainForecast / loadPlantingScenario ฯลฯ ในนี้แล้ว
 });

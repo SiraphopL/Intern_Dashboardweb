@@ -19,6 +19,21 @@ function setLoading(el, isLoading) {
     }
 }
 
+// ===================== ERROR OVERLAY ELEMENTS =====================
+
+const rainChartError = document.getElementById("rainChartError");
+const waterCompareError = document.getElementById("waterCompareError");
+const deficitChartError = document.getElementById("deficitChartError");
+
+function setError(el, isError) {
+    if (!el) return;
+    if (isError) {
+        el.classList.remove("hidden");
+    } else {
+        el.classList.add("hidden");
+    }
+}
+
 // ===================== GLOBAL MAP VARIABLES =====================
 
 let map = null;         // แผนที่ Leaflet
@@ -829,9 +844,11 @@ async function loadPlantingScenario(areaCode, dateOverride, riceVariety, plantin
         params.append("date", dateOverride);
     }
 
-    // ✅ เริ่มโหลด: โชว์ overlay ทั้งสองกราฟล่าง
+    // เริ่มโหลด: โชว์ loading, ซ่อน error
     setLoading(waterCompareLoading, true);
     setLoading(deficitChartLoading, true);
+    setError(waterCompareError, false);
+    setError(deficitChartError, false);
 
     try {
         const res = await fetch(`/api/planting_scenario?${params.toString()}`);
@@ -878,14 +895,22 @@ async function loadPlantingScenario(areaCode, dateOverride, riceVariety, plantin
 
     } catch (err) {
         console.error("โหลดข้อมูล planting_scenario ไม่ได้:", err);
-        // ถ้าอยากทำ fallback กราฟล่างก็ทำเพิ่มได้
+        // ❌ error → โชว์ปุ่มรีเฟรชบนทั้งสองกราฟ
+        setError(waterCompareError, true);
+        setError(deficitChartError, true);
     } finally {
-        // ✅ โหลดเสร็จ หรือ error ก็ปิด overlay
         setLoading(waterCompareLoading, false);
         setLoading(deficitChartLoading, false);
     }
 }
 
+// เรียกจากปุ่ม "ลองโหลดอีกครั้ง" ของกราฟล่างทั้งสอง
+function retryPlantingScenario() {
+    if (!currentAreaCode) return;
+    setError(waterCompareError, false);
+    setError(deficitChartError, false);
+    loadPlantingScenario(currentAreaCode);
+}
 
 // ---------------------- EVENT LISTENERS ----------------------
 
@@ -961,13 +986,14 @@ async function loadRainForecast(areaCode) {
     areaCode = areaCode || currentAreaCode;
     if (!areaCode) return;
 
-    // ✅ เริ่มโหลด: โชว์ overlay กราฟฝน
+    // เริ่มโหลด: โชว์ loading, ซ่อน error
     setLoading(rainChartLoading, true);
+    setError(rainChartError, false);
 
     try {
         const params = new URLSearchParams({
             area_code: areaCode,
-            date: "01-06-2025",          // ไว้เดี๋ยวค่อยปรับทีหลัง
+            date: "01-06-2025",
             rice_variety: currentRiceVariety,
             planting_method: currentPlantingMethod
         });
@@ -977,34 +1003,35 @@ async function loadRainForecast(areaCode) {
         if (!res.ok) {
             console.error("rain_forecast HTTP status:", res.status);
             drawFallbackRainChart();
+            // ❌ ถ้า status ไม่ใช่ 2xx → ถือว่า error → ให้โชว์ปุ่มรีเฟรช
+            setError(rainChartError, true);
             return;
         }
 
         const data = await res.json();
         console.log("rain_forecast data:", data);
 
-        // ⭐ อัปเดตแผนที่จาก lat/lon ที่ได้มาจาก API
         updateMapFromRainForecast(data);
 
         if (!data || !data.rainfall_data) {
             drawFallbackRainChart();
+            setError(rainChartError, true);
             return;
         }
 
         const rf = data.rainfall_data;
-
-        // ---------- labels 36 dekad ----------
         const labels = Array.isArray(rf.time_line) ? rf.time_line : [];
         if (!labels.length) {
             drawFallbackRainChart();
+            setError(rainChartError, true);
             return;
         }
+
         const n = labels.length;
 
         function norm(arr) {
             const out = new Array(n).fill(0);
             if (!Array.isArray(arr)) return out;
-
             for (let i = 0; i < n; i++) {
                 const raw = arr[i];
                 const num = Number(raw);
@@ -1021,12 +1048,7 @@ async function loadRainForecast(areaCode) {
             "";
 
         let currentIndex = -1;
-        if (currentLabel) {
-            currentIndex = labels.indexOf(currentLabel);
-        }
-
-        console.log("labels:", labels);
-        console.log("currentLabel:", currentLabel, "currentIndex:", currentIndex);
+        if (currentLabel) currentIndex = labels.indexOf(currentLabel);
 
         const rainfallArr = Array.isArray(rf.rainfall) ? rf.rainfall : [];
         const barValues = new Array(n).fill(0);
@@ -1039,15 +1061,10 @@ async function loadRainForecast(areaCode) {
                 : 0;
             barValues[i] = val;
 
-            let color = "#5b9bd5"; // คาดการณ์
+            let color = "#5b9bd5";
             if (currentIndex >= 0) {
-                if (i < currentIndex) {
-                    color = "#1f4e79"; // ก่อนปัจจุบัน = ค่าจริง
-                } else if (i === currentIndex) {
-                    color = "#00b0f0"; // ปัจจุบัน
-                } else {
-                    color = "#5b9bd5"; // หลังปัจจุบัน = คาดการณ์
-                }
+                if (i < currentIndex) color = "#1f4e79";
+                else if (i === currentIndex) color = "#00b0f0";
             }
             barColors[i] = color;
         }
@@ -1055,22 +1072,24 @@ async function loadRainForecast(areaCode) {
         const prevYearArr = norm(rf.last_year_rainfall || []);
         const avg15Arr = norm(rf.avg_15yrs || []);
 
-        console.log("barValues :", barValues);
-        console.log("prevYearArr:", prevYearArr);
-        console.log("avg15Arr   :", avg15Arr);
-
         updateRainChart(labels, barValues, barColors, prevYearArr, avg15Arr);
 
     } catch (err) {
         console.error("โหลด rain forecast ไม่ได้:", err);
         drawFallbackRainChart();
+        // network error / timeout ฯลฯ → โชว์ปุ่มรีเฟรช
+        setError(rainChartError, true);
     } finally {
-        // ✅ โหลดเสร็จ หรือ error ก็ปิด overlay
         setLoading(rainChartLoading, false);
     }
 }
 
-
+// เรียกจากปุ่ม "ลองโหลดอีกครั้ง" ของกราฟฝน
+function retryRain() {
+    if (!currentAreaCode) return;
+    setError(rainChartError, false);
+    loadRainForecast(currentAreaCode);
+}
 
 // ===================== เมื่อโหลดหน้าเสร็จ =====================
 

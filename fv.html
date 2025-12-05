@@ -133,221 +133,271 @@
             <span>ค่าเฉลี่ยน้ำฝนย้อนหลัง 15 ปี</span>
           </div>
         </div>
-        <div class="rain-chart-body">
-          <!-- overlay ตอนกำลังโหลดกราฟฝน -->
-          <div class="chart-loading hidden" id="rainChartLoading">
-            <div class="skeleton-bars">
-              <div class="skeleton-bar"></div>
-              <div class="skeleton-bar"></div>
-              <div class="skeleton-bar"></div>
-              <div class="skeleton-bar"></div>
-              <div class="skeleton-bar"></div>
-              <div class="skeleton-bar"></div>
+
+        <div class="panel rain-panel">
+          <div class="panel-title">ปริมาณน้ำฝน (หน่วย : ลบ.ม./ไร่)</div>
+
+          <div class="chart-legend">
+            <!-- legend เดิมทั้งหมดคงไว้เหมือนเดิม -->
+            ...
+          </div>
+
+          <!-- กรอบกราฟ -->
+          <div class="rain-chart-body">
+            <!-- overlay ตอนกำลังโหลดกราฟฝน -->
+            <div class="chart-loading hidden" id="rainChartLoading">
+              <div class="skeleton-bars">
+                <div class="skeleton-bar"></div>
+                <div class="skeleton-bar"></div>
+                <div class="skeleton-bar"></div>
+                <div class="skeleton-bar"></div>
+                <div class="skeleton-bar"></div>
+                <div class="skeleton-bar"></div>
+              </div>
+              <div class="loading-text">กำลังโหลดข้อมูลปริมาณน้ำฝน...</div>
             </div>
-            <div class="loading-text">กำลังโหลดข้อมูลปริมาณน้ำฝน...</div>
+
+            <!-- overlay ตอน error -->
+            <div class="chart-error hidden" id="rainChartError">
+              <div class="error-text">
+                โหลดข้อมูลปริมาณน้ำฝนไม่สำเร็จ (เช่น 500)<br>
+                กรุณาลองใหม่อีกครั้ง
+              </div>
+              <button type="button" class="retry-btn" onclick="retryRain()">
+                ลองโหลดอีกครั้ง
+              </button>
+            </div>
+
+            <!-- canvas กราฟ -->
+            <canvas id="rainChart"></canvas>
           </div>
 
-          <canvas id="rainChart"></canvas>
-        </div>
+          <!-- ICON BAR (ช่วงรูปข้าวที่กดได้) อยู่ในกรอบกราฟแล้ว -->
+          <div class="icon-bar" id="riceStageBar">
+            <!-- พ.ค. 68 -->
+            <div class="icon-cell" data-label="1 พ.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="11 พ.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="21 พ.ค. 68">🌾</div>
 
+            <!-- มิ.ย. 68 -->
+            <div class="icon-cell" data-label="1 มิ.ย. 68">🌾</div>
+            <div class="icon-cell" data-label="11 มิ.ย. 68">🌾</div>
+            <div class="icon-cell" data-label="21 มิ.ย. 68">🌾</div>
 
-        <!-- ICON BAR (ช่วงรูปข้าวที่กดได้) อยู่ในกรอบกราฟแล้ว -->
-        <div class="icon-bar" id="riceStageBar">
-          <!-- พ.ค. 68 -->
-          <div class="icon-cell" data-label="1 พ.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="11 พ.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="21 พ.ค. 68">🌾</div>
+            <!-- ก.ค. 68 -->
+            <div class="icon-cell" data-label="1 ก.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="11 ก.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="21 ก.ค. 68">🌾</div>
 
-          <!-- มิ.ย. 68 -->
-          <div class="icon-cell" data-label="1 มิ.ย. 68">🌾</div>
-          <div class="icon-cell" data-label="11 มิ.ย. 68">🌾</div>
-          <div class="icon-cell" data-label="21 มิ.ย. 68">🌾</div>
+            <!-- ส.ค. 68 -->
+            <div class="icon-cell" data-label="1 ส.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="11 ส.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="21 ส.ค. 68">🌾</div>
 
-          <!-- ก.ค. 68 -->
-          <div class="icon-cell" data-label="1 ก.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="11 ก.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="21 ก.ค. 68">🌾</div>
+            <!-- ก.ย. 68 -->
+            <div class="icon-cell" data-label="1 ก.ย. 68">🌾</div>
+            <div class="icon-cell" data-label="11 ก.ย. 68">🌾</div>
+            <div class="icon-cell" data-label="21 ก.ย. 68">🌾</div>
 
-          <!-- ส.ค. 68 -->
-          <div class="icon-cell" data-label="1 ส.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="11 ส.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="21 ส.ค. 68">🌾</div>
+            <!-- ต.ค. 68 -->
+            <div class="icon-cell" data-label="1 ต.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="11 ต.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="21 ต.ค. 68">🌾</div>
 
-          <!-- ก.ย. 68 -->
-          <div class="icon-cell" data-label="1 ก.ย. 68">🌾</div>
-          <div class="icon-cell" data-label="11 ก.ย. 68">🌾</div>
-          <div class="icon-cell" data-label="21 ก.ย. 68">🌾</div>
+            <!-- พ.ย. 68 -->
+            <div class="icon-cell" data-label="1 พ.ย. 68">🌾</div>
+            <div class="icon-cell" data-label="11 พ.ย. 68">🌾</div>
+            <div class="icon-cell" data-label="21 พ.ย. 68">🌾</div>
 
-          <!-- ต.ค. 68 -->
-          <div class="icon-cell" data-label="1 ต.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="11 ต.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="21 ต.ค. 68">🌾</div>
+            <!-- ธ.ค. 68 -->
+            <div class="icon-cell" data-label="1 ธ.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="11 ธ.ค. 68">🌾</div>
+            <div class="icon-cell" data-label="21 ธ.ค. 68">🌾</div>
 
-          <!-- พ.ย. 68 -->
-          <div class="icon-cell" data-label="1 พ.ย. 68">🌾</div>
-          <div class="icon-cell" data-label="11 พ.ย. 68">🌾</div>
-          <div class="icon-cell" data-label="21 พ.ย. 68">🌾</div>
+            <!-- ม.ค. 69 -->
+            <div class="icon-cell" data-label="1 ม.ค. 69">🌾</div>
+            <div class="icon-cell" data-label="11 ม.ค. 69">🌾</div>
+            <div class="icon-cell" data-label="21 ม.ค. 69">🌾</div>
 
-          <!-- ธ.ค. 68 -->
-          <div class="icon-cell" data-label="1 ธ.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="11 ธ.ค. 68">🌾</div>
-          <div class="icon-cell" data-label="21 ธ.ค. 68">🌾</div>
+            <!-- ก.พ. 69 -->
+            <div class="icon-cell" data-label="1 ก.พ. 69">🌾</div>
+            <div class="icon-cell" data-label="11 ก.พ. 69">🌾</div>
+            <div class="icon-cell" data-label="21 ก.พ. 69">🌾</div>
 
-          <!-- ม.ค. 69 -->
-          <div class="icon-cell" data-label="1 ม.ค. 69">🌾</div>
-          <div class="icon-cell" data-label="11 ม.ค. 69">🌾</div>
-          <div class="icon-cell" data-label="21 ม.ค. 69">🌾</div>
+            <!-- มี.ค. 69 -->
+            <div class="icon-cell" data-label="1 มี.ค. 69">🌾</div>
+            <div class="icon-cell" data-label="11 มี.ค. 69">🌾</div>
+            <div class="icon-cell" data-label="21 มี.ค. 69">🌾</div>
 
-          <!-- ก.พ. 69 -->
-          <div class="icon-cell" data-label="1 ก.พ. 69">🌾</div>
-          <div class="icon-cell" data-label="11 ก.พ. 69">🌾</div>
-          <div class="icon-cell" data-label="21 ก.พ. 69">🌾</div>
-
-          <!-- มี.ค. 69 -->
-          <div class="icon-cell" data-label="1 มี.ค. 69">🌾</div>
-          <div class="icon-cell" data-label="11 มี.ค. 69">🌾</div>
-          <div class="icon-cell" data-label="21 มี.ค. 69">🌾</div>
-
-          <!-- เม.ย. 69 -->
-          <div class="icon-cell" data-label="1 เม.ย. 69">🌾</div>
-          <div class="icon-cell" data-label="11 เม.ย. 69">🌾</div>
-          <div class="icon-cell" data-label="21 เม.ย. 69">🌾</div>
-        </div>
-
-
-      </div>
-    </div>
-
-    <!-- แถวล่าง: ซ้าย = ปฏิทินความเสี่ยง, ขวา = KPI + ต้นทุน -->
-    <div class="main-lower">
-      <!-- ซ้ายล่างใต้แผนที่ -->
-      <div class="calendar-panel">
-        <div class="panel-title">ปฏิทินระดับความเสี่ยงการสูญเสียผลผลิต</div>
-
-        <div class="calendar-header-row">
-          <div id="yield-calendar-title" class="calendar-title-text">
-            <!-- จะถูก JS เขียนชื่อเดือน/ปีให้ -->
+            <!-- เม.ย. 69 -->
+            <div class="icon-cell" data-label="1 เม.ย. 69">🌾</div>
+            <div class="icon-cell" data-label="11 เม.ย. 69">🌾</div>
+            <div class="icon-cell" data-label="21 เม.ย. 69">🌾</div>
           </div>
-          <div class="calendar-legend">
-            <span class="calendar-legend-item">
-              <span class="calendar-legend-color yield-level-0"></span> ตามเกณฑ์
-            </span>
-            <span class="calendar-legend-item">
-              <span class="calendar-legend-color yield-level-1"></span> ต่ำกว่าเกณฑ์
-            </span>
-            <span class="calendar-legend-item">
-              <span class="calendar-legend-color yield-level-2"></span> ต่ำกว่าเกณฑ์มาก
-            </span>
-          </div>
-        </div>
 
-        <div id="yield-calendar-grid" class="calendar-grid">
-          <!-- JS จะสร้างช่องปฏิทินมาใส่ตรงนี้ -->
+
         </div>
       </div>
 
-      <!-- ขวาล่างใต้กราฟน้ำฝน -->
-      <div class="kpi-panel">
-        <div class="panel-title">สรุปสถานการณ์น้ำและผลผลิต</div>
+      <!-- แถวล่าง: ซ้าย = ปฏิทินความเสี่ยง, ขวา = KPI + ต้นทุน -->
+      <div class="main-lower">
+        <!-- ซ้ายล่างใต้แผนที่ -->
+        <div class="calendar-panel">
+          <div class="panel-title">ปฏิทินระดับความเสี่ยงการสูญเสียผลผลิต</div>
 
-        <!-- แถวการ์ด KPI -->
-        <div class="kpi-row">
-          <div class="kpi-card">
-            <div class="kpi-title">
-              <div class="kpi-icon"></div>
-              <span>ปฏิทินการปลูก</span>
+          <div class="calendar-header-row">
+            <div id="yield-calendar-title" class="calendar-title-text">
+              <!-- จะถูก JS เขียนชื่อเดือน/ปีให้ -->
             </div>
-            <div class="kpi-period" id="kpi-planting-period">
-              กำลังปลูก &nbsp; 1 - 10 พ.ย. 68
-            </div>
-          </div>
-
-          <div class="kpi-card kpi-card-number">
-            <div class="kpi-title">
-              <div class="kpi-icon" style="background:#0099ff;"></div>
-              <span>ปริมาณการขาดแคลนน้ำ<br />(หน่วย : ลบ.ม./ไร่)</span>
-            </div>
-            <div class="kpi-value" id="kpi-water-deficit">251</div>
-          </div>
-
-          <div class="kpi-card kpi-card-number">
-            <div class="kpi-title">
-              <div class="kpi-icon" style="background:#6f42c1;"></div>
-              <span>ความต้องการน้ำรวม<br />(หน่วย : ลบ.ม./ไร่)</span>
-            </div>
-            <div class="kpi-value" id="kpi-water-demand">1,321</div>
-          </div>
-
-          <div class="kpi-card kpi-card-number">
-            <div class="kpi-title">
-              <div class="kpi-icon" style="background:#006699;"></div>
-              <span>ปริมาณน้ำที่ใช้ได้<br />(หน่วย : ลบ.ม./ไร่)</span>
-            </div>
-            <div class="kpi-value" id="kpi-water-supply" style="color:#333;">1,069</div>
-          </div>
-
-          <!-- เกณฑ์ผลผลิต -->
-          <div class="cost-card">
-            <div class="cost-header">
-              <div class="cost-icon"></div>
-              <div class="cost-title">เกณฑ์ผลผลิต</div>
-            </div>
-
-            <div class="cost-bar-wrapper">
-              <div class="cost-bar-seg cost-green"></div>
-              <div class="cost-bar-seg cost-yellow"></div>
-              <div class="cost-bar-seg cost-red"></div>
-              <div class="cost-pointer"></div>
-            </div>
-
-            <div class="cost-label-row">
-              <div class="cost-label">ตามเกณฑ์</div>
-              <div class="cost-label">ต่ำกว่าเกณฑ์</div>
-              <div class="cost-label">ต่ำกว่าเกณฑ์มาก</div>
+            <div class="calendar-legend">
+              <span class="calendar-legend-item">
+                <span class="calendar-legend-color yield-level-0"></span> ตามเกณฑ์
+              </span>
+              <span class="calendar-legend-item">
+                <span class="calendar-legend-color yield-level-1"></span> ต่ำกว่าเกณฑ์
+              </span>
+              <span class="calendar-legend-item">
+                <span class="calendar-legend-color yield-level-2"></span> ต่ำกว่าเกณฑ์มาก
+              </span>
             </div>
           </div>
-        </div> <!-- ปิด .kpi-row -->
 
-        <!-- กราฟน้ำ 2 อัน อยู่แถวถัดลงมา -->
-        <div class="kpi-charts-wrapper">
+          <div id="yield-calendar-grid" class="calendar-grid">
+            <!-- JS จะสร้างช่องปฏิทินมาใส่ตรงนี้ -->
+          </div>
+        </div>
 
-          <div class="kpi-chart-panel">
-            <div class="panel-title">
-              เปรียบเทียบความต้องการน้ำและปริมาณน้ำที่ใช้ได้ (หน่วย : ลบ.ม./ไร่)
+        <!-- ขวาล่างใต้กราฟน้ำฝน -->
+        <div class="kpi-panel">
+          <div class="panel-title">สรุปสถานการณ์น้ำและผลผลิต</div>
+
+          <!-- แถวการ์ด KPI -->
+          <div class="kpi-row">
+            <div class="kpi-card">
+              <div class="kpi-title">
+                <div class="kpi-icon"></div>
+                <span>ปฏิทินการปลูก</span>
+              </div>
+              <div class="kpi-period" id="kpi-planting-period">
+                กำลังปลูก &nbsp; 1 - 10 พ.ย. 68
+              </div>
             </div>
-            <div class="kpi-chart-body">
-              <!-- overlay ตอนกำลังโหลดกราฟเปรียบเทียบน้ำ -->
-              <div class="chart-loading hidden" id="waterCompareLoading">
-                <div class="skeleton-bars">
-                  <div class="skeleton-bar"></div>
-                  <div class="skeleton-bar"></div>
-                  <div class="skeleton-bar"></div>
-                  <div class="skeleton-bar"></div>
-                </div>
-                <div class="loading-text">กำลังโหลดสถานการณ์น้ำ...</div>
+
+            <div class="kpi-card kpi-card-number">
+              <div class="kpi-title">
+                <div class="kpi-icon" style="background:#0099ff;"></div>
+                <span>ปริมาณการขาดแคลนน้ำ<br />(หน่วย : ลบ.ม./ไร่)</span>
+              </div>
+              <div class="kpi-value" id="kpi-water-deficit">251</div>
+            </div>
+
+            <div class="kpi-card kpi-card-number">
+              <div class="kpi-title">
+                <div class="kpi-icon" style="background:#6f42c1;"></div>
+                <span>ความต้องการน้ำรวม<br />(หน่วย : ลบ.ม./ไร่)</span>
+              </div>
+              <div class="kpi-value" id="kpi-water-demand">1,321</div>
+            </div>
+
+            <div class="kpi-card kpi-card-number">
+              <div class="kpi-title">
+                <div class="kpi-icon" style="background:#006699;"></div>
+                <span>ปริมาณน้ำที่ใช้ได้<br />(หน่วย : ลบ.ม./ไร่)</span>
+              </div>
+              <div class="kpi-value" id="kpi-water-supply" style="color:#333;">1,069</div>
+            </div>
+
+            <!-- เกณฑ์ผลผลิต -->
+            <div class="cost-card">
+              <div class="cost-header">
+                <div class="cost-icon"></div>
+                <div class="cost-title">เกณฑ์ผลผลิต</div>
               </div>
 
-              <canvas id="waterCompareChart"></canvas>
+              <div class="cost-bar-wrapper">
+                <div class="cost-bar-seg cost-green"></div>
+                <div class="cost-bar-seg cost-yellow"></div>
+                <div class="cost-bar-seg cost-red"></div>
+                <div class="cost-pointer"></div>
+              </div>
+
+              <div class="cost-label-row">
+                <div class="cost-label">ตามเกณฑ์</div>
+                <div class="cost-label">ต่ำกว่าเกณฑ์</div>
+                <div class="cost-label">ต่ำกว่าเกณฑ์มาก</div>
+              </div>
+            </div>
+          </div> <!-- ปิด .kpi-row -->
+
+          <!-- กราฟน้ำ 2 อัน อยู่แถวถัดลงมา -->
+          <div class="kpi-charts-wrapper">
+
+            <!-- กราฟล่างซ้าย -->
+            <div class="kpi-chart-panel">
+              <div class="panel-title">
+                เปรียบเทียบความต้องการน้ำและปริมาณน้ำที่ใช้ได้ (หน่วย : ลบ.ม./ไร่)
+              </div>
+              <div class="kpi-chart-body">
+                <div class="chart-loading hidden" id="waterCompareLoading">
+                  <div class="skeleton-bars">
+                    <div class="skeleton-bar"></div>
+                    <div class="skeleton-bar"></div>
+                    <div class="skeleton-bar"></div>
+                    <div class="skeleton-bar"></div>
+                  </div>
+                  <div class="loading-text">กำลังโหลดสถานการณ์น้ำ...</div>
+                </div>
+
+                <div class="chart-error hidden" id="waterCompareError">
+                  <div class="error-text">
+                    โหลดข้อมูลสถานการณ์น้ำไม่สำเร็จ (เช่น 500)
+                  </div>
+                  <button type="button" class="retry-btn" onclick="retryPlantingScenario()">
+                    ลองโหลดอีกครั้ง
+                  </button>
+                </div>
+
+                <canvas id="waterCompareChart"></canvas>
+              </div>
+            </div>
+
+            <!-- กราฟล่างขวา -->
+            <div class="kpi-chart-panel">
+              <div class="panel-title">
+                ปริมาณการขาดแคลนน้ำ (หน่วย : ลบ.ม./ไร่)
+              </div>
+              <div class="kpi-chart-body">
+                <div class="chart-loading hidden" id="deficitChartLoading">
+                  <div class="skeleton-line"></div>
+                  <div class="loading-text">กำลังโหลดปริมาณการขาดแคลนน้ำ...</div>
+                </div>
+
+                <div class="chart-error hidden" id="deficitChartError">
+                  <div class="error-text">
+                    โหลดข้อมูลปริมาณการขาดแคลนน้ำไม่สำเร็จ (เช่น 500)
+                  </div>
+                  <button type="button" class="retry-btn" onclick="retryPlantingScenario()">
+                    ลองโหลดอีกครั้ง
+                  </button>
+                </div>
+
+                <canvas id="deficitChart"></canvas>
+              </div>
             </div>
 
           </div>
 
-          <div class="kpi-chart-panel">
-            <div class="panel-title">
-              ปริมาณการขาดแคลนน้ำ (หน่วย : ลบ.ม./ไร่)
-            </div>
-            <div class="kpi-chart-body">
-              <canvas id="deficitChart"></canvas>
-            </div>
-          </div>
+
+
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="footer-note">
-      หมายเหตุ : หน้าจอนี้เป็นเพียงตัวอย่างเพื่อประกอบการออกแบบระบบเว็บ<br />
-      สามารถเชื่อมข้อมูลจริงด้วย JavaScript / API ภายหลังได้
-    </div>
+  <div class="footer-note">
+    หมายเหตุ : หน้าจอนี้เป็นเพียงตัวอย่างเพื่อประกอบการออกแบบระบบเว็บ<br />
+    สามารถเชื่อมข้อมูลจริงด้วย JavaScript / API ภายหลังได้
+  </div>
   </div>
 
   <!-- Chart.js -->

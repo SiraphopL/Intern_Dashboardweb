@@ -134,8 +134,22 @@
           </div>
         </div>
         <div class="rain-chart-body">
+          <!-- overlay ตอนกำลังโหลดกราฟฝน -->
+          <div class="chart-loading hidden" id="rainChartLoading">
+            <div class="skeleton-bars">
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+            </div>
+            <div class="loading-text">กำลังโหลดข้อมูลปริมาณน้ำฝน...</div>
+          </div>
+
           <canvas id="rainChart"></canvas>
         </div>
+
 
         <!-- ICON BAR (ช่วงรูปข้าวที่กดได้) อยู่ในกรอบกราฟแล้ว -->
         <div class="icon-bar" id="riceStageBar">
@@ -302,8 +316,20 @@
               เปรียบเทียบความต้องการน้ำและปริมาณน้ำที่ใช้ได้ (หน่วย : ลบ.ม./ไร่)
             </div>
             <div class="kpi-chart-body">
+              <!-- overlay ตอนกำลังโหลดกราฟเปรียบเทียบน้ำ -->
+              <div class="chart-loading hidden" id="waterCompareLoading">
+                <div class="skeleton-bars">
+                  <div class="skeleton-bar"></div>
+                  <div class="skeleton-bar"></div>
+                  <div class="skeleton-bar"></div>
+                  <div class="skeleton-bar"></div>
+                </div>
+                <div class="loading-text">กำลังโหลดสถานการณ์น้ำ...</div>
+              </div>
+
               <canvas id="waterCompareChart"></canvas>
             </div>
+
           </div>
 
           <div class="kpi-chart-panel">
@@ -311,8 +337,15 @@
               ปริมาณการขาดแคลนน้ำ (หน่วย : ลบ.ม./ไร่)
             </div>
             <div class="kpi-chart-body">
-              <canvas id="deficitChart"></canvas>
-            </div>
+  <!-- overlay ตอนกำลังโหลดกราฟขาดแคลนน้ำ -->
+  <div class="chart-loading hidden" id="deficitChartLoading">
+    <div class="skeleton-line"></div>
+    <div class="loading-text">กำลังโหลดปริมาณการขาดแคลนน้ำ...</div>
+  </div>
+
+  <canvas id="deficitChart"></canvas>
+</div>
+
           </div>
         </div>
       </div>

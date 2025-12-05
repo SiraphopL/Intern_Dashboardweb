@@ -4,10 +4,26 @@ let rainChart = null;           // กราฟด้านบนสุด
 let waterCompareChart = null;   // กราฟล่างซ้าย
 let deficitChart = null;        // กราฟล่างขวา
 
+// ===================== LOADING OVERLAY ELEMENTS =====================
+
+const rainChartLoading = document.getElementById("rainChartLoading");
+const waterCompareLoading = document.getElementById("waterCompareLoading");
+const deficitChartLoading = document.getElementById("deficitChartLoading");
+
+function setLoading(el, isLoading) {
+    if (!el) return;
+    if (isLoading) {
+        el.classList.remove("hidden");
+    } else {
+        el.classList.add("hidden");
+    }
+}
+
 // ===================== GLOBAL MAP VARIABLES =====================
 
 let map = null;         // แผนที่ Leaflet
 let areaMarker = null;  // marker แสดงตำแหน่งพื้นที่ปลูก
+let riceLayer = null;   // layer สำหรับแสดงนาข้าว (วงกลมสีเหลือง)
 
 // ฟังก์ชัน format ตัวเลขเป็นรูปแบบไทย
 function formatNumberTH(value) {
@@ -509,7 +525,29 @@ function updateMapFromRainForecast(data) {
 
     // เลื่อนมุมมองแผนที่ไปยังตำแหน่งนั้น
     map.setView([lat, lon], 11);    // จะเพิ่ม/ลด zoom level ก็ปรับเลขนี้ได้
+
+    // 🔶 วาดพื้นที่นาข้าวเป็นวงกลมสีเหลืองรอบจุดนี้
+    showRiceAreaFromPoint(lat, lon, 800);   // ปรับ 800 เป็นรัศมีที่อยากให้ครอบพื้นที่
 }
+
+function showRiceAreaFromPoint(lat, lon, radius = 800) {
+    if (!map) return;
+
+    // ลบ layer เก่า ถ้ามี
+    if (riceLayer) {
+        map.removeLayer(riceLayer);
+    }
+
+    // วาดวงกลมสีเหลืองรอบจุดที่สนใจ
+    riceLayer = L.circle([lat, lon], {
+        radius: radius,        // หน่วยเมตร ปรับใหญ่/เล็กได้
+        color: '#ffcc00',      // เส้นขอบเหลือง
+        weight: 2,
+        fillColor: '#fff4a3',  // พื้นเหลืองอ่อน
+        fillOpacity: 0.5
+    }).addTo(map);
+}
+
 
 
 // ===================== YIELD REDUCTION (ปฏิทิน + ต้นทุน) =====================
@@ -791,6 +829,10 @@ async function loadPlantingScenario(areaCode, dateOverride, riceVariety, plantin
         params.append("date", dateOverride);
     }
 
+    // ✅ เริ่มโหลด: โชว์ overlay ทั้งสองกราฟล่าง
+    setLoading(waterCompareLoading, true);
+    setLoading(deficitChartLoading, true);
+
     try {
         const res = await fetch(`/api/planting_scenario?${params.toString()}`);
         if (!res.ok) {
@@ -800,8 +842,6 @@ async function loadPlantingScenario(areaCode, dateOverride, riceVariety, plantin
         const data = await res.json();
         console.log("planting_scenario data:", data);
 
-        // ... โค้ดเดิมอัปเดต KPI + กราฟ เหมือนเดิมทั้งหมด ...
-        // (ส่วนในไฟล์เธอตอนนี้ใช้ได้แล้ว แค่ไม่ลืมเก็บไว้เหมือนเดิม)
         const totalDemand = data.total_demand ?? 0;
         const totalSupply = data.total_supply ?? 0;
         const totalWB = data.total_water_balance ?? (totalDemand - totalSupply);
@@ -833,14 +873,19 @@ async function loadPlantingScenario(areaCode, dateOverride, riceVariety, plantin
             return "";
         });
 
-        //buildRainChart(labels, demand, supply);
         buildWaterCompareChart(labels, demand, supply);
         buildDeficitChart(labels, demand, supply);
 
     } catch (err) {
         console.error("โหลดข้อมูล planting_scenario ไม่ได้:", err);
+        // ถ้าอยากทำ fallback กราฟล่างก็ทำเพิ่มได้
+    } finally {
+        // ✅ โหลดเสร็จ หรือ error ก็ปิด overlay
+        setLoading(waterCompareLoading, false);
+        setLoading(deficitChartLoading, false);
     }
 }
+
 
 // ---------------------- EVENT LISTENERS ----------------------
 
@@ -916,6 +961,9 @@ async function loadRainForecast(areaCode) {
     areaCode = areaCode || currentAreaCode;
     if (!areaCode) return;
 
+    // ✅ เริ่มโหลด: โชว์ overlay กราฟฝน
+    setLoading(rainChartLoading, true);
+
     try {
         const params = new URLSearchParams({
             area_code: areaCode,
@@ -953,20 +1001,18 @@ async function loadRainForecast(areaCode) {
         }
         const n = labels.length;
 
-        // helper ให้ array ยาว n และเป็นตัวเลข
         function norm(arr) {
             const out = new Array(n).fill(0);
             if (!Array.isArray(arr)) return out;
 
             for (let i = 0; i < n; i++) {
                 const raw = arr[i];
-                const num = Number(raw);        // แปลง "25" -> 25
+                const num = Number(raw);
                 out[i] = Number.isFinite(num) ? num : 0;
             }
             return out;
         }
 
-        // ---------- current dekad index ----------
         const currentLabel =
             data.current_dakad_label ||
             data.current_dekad_label ||
@@ -982,10 +1028,9 @@ async function loadRainForecast(areaCode) {
         console.log("labels:", labels);
         console.log("currentLabel:", currentLabel, "currentIndex:", currentIndex);
 
-        // ---------- สร้างค่าแท่งจาก rainfall ----------
         const rainfallArr = Array.isArray(rf.rainfall) ? rf.rainfall : [];
         const barValues = new Array(n).fill(0);
-        const barColors = new Array(n).fill("#5b9bd5");   // เริ่มต้น = คาดการณ์
+        const barColors = new Array(n).fill("#5b9bd5");
 
         for (let i = 0; i < n; i++) {
             const item = rainfallArr[i] || {};
@@ -997,20 +1042,16 @@ async function loadRainForecast(areaCode) {
             let color = "#5b9bd5"; // คาดการณ์
             if (currentIndex >= 0) {
                 if (i < currentIndex) {
-                    // ก่อนปัจจุบัน = ค่าจริง (น้ำเงินเข้ม)
-                    color = "#1f4e79";
+                    color = "#1f4e79"; // ก่อนปัจจุบัน = ค่าจริง
                 } else if (i === currentIndex) {
-                    // ปัจจุบัน = แท่งสีฟ้า
-                    color = "#00b0f0";
+                    color = "#00b0f0"; // ปัจจุบัน
                 } else {
-                    // หลังปัจจุบัน = คาดการณ์ (น้ำเงินกลาง)
-                    color = "#5b9bd5";
+                    color = "#5b9bd5"; // หลังปัจจุบัน = คาดการณ์
                 }
             }
             barColors[i] = color;
         }
 
-        // ---------- เส้นปีก่อน + เส้นเฉลี่ย 15 ปี ----------
         const prevYearArr = norm(rf.last_year_rainfall || []);
         const avg15Arr = norm(rf.avg_15yrs || []);
 
@@ -1018,14 +1059,17 @@ async function loadRainForecast(areaCode) {
         console.log("prevYearArr:", prevYearArr);
         console.log("avg15Arr   :", avg15Arr);
 
-        // วาดกราฟ
         updateRainChart(labels, barValues, barColors, prevYearArr, avg15Arr);
 
     } catch (err) {
         console.error("โหลด rain forecast ไม่ได้:", err);
         drawFallbackRainChart();
+    } finally {
+        // ✅ โหลดเสร็จ หรือ error ก็ปิด overlay
+        setLoading(rainChartLoading, false);
     }
 }
+
 
 
 // ===================== เมื่อโหลดหน้าเสร็จ =====================

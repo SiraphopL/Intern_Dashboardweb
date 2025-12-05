@@ -83,7 +83,7 @@
         <div class="filter-label">วิธีการปลูก</div>
         <div class="filter-select">
           <select id="plantingMethodSelect">
-            <option value="หว่านน้ำตม">หว่าน</option>
+            <option value="หว่านน้ำตม">หว่านน้ำตม</option>
             <option value="ปักดำ">ปักดำ</option>
           </select>
         </div>
@@ -101,7 +101,7 @@
       </div>
 
       <div class="panel rain-panel">
-        <div class="panel-title">ปริมาณน้ำฝน (หน่วย : มม./ไร่)</div>
+        <div class="panel-title">ปริมาณน้ำฝน (หน่วย : ลบ.ม./ไร่)</div>
         <div class="chart-legend">
           <!-- แท่งค่าจริง (น้ำเงินเข้ม) -->
           <div class="legend-item">
@@ -134,8 +134,22 @@
           </div>
         </div>
         <div class="rain-chart-body">
+          <!-- overlay ตอนกำลังโหลดกราฟฝน -->
+          <div class="chart-loading hidden" id="rainChartLoading">
+            <div class="skeleton-bars">
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+              <div class="skeleton-bar"></div>
+            </div>
+            <div class="loading-text">กำลังโหลดข้อมูลปริมาณน้ำฝน...</div>
+          </div>
+
           <canvas id="rainChart"></canvas>
         </div>
+
 
         <!-- ICON BAR (ช่วงรูปข้าวที่กดได้) อยู่ในกรอบกราฟแล้ว -->
         <div class="icon-bar" id="riceStageBar">
@@ -302,8 +316,20 @@
               เปรียบเทียบความต้องการน้ำและปริมาณน้ำที่ใช้ได้ (หน่วย : ลบ.ม./ไร่)
             </div>
             <div class="kpi-chart-body">
+              <!-- overlay ตอนกำลังโหลดกราฟเปรียบเทียบน้ำ -->
+              <div class="chart-loading hidden" id="waterCompareLoading">
+                <div class="skeleton-bars">
+                  <div class="skeleton-bar"></div>
+                  <div class="skeleton-bar"></div>
+                  <div class="skeleton-bar"></div>
+                  <div class="skeleton-bar"></div>
+                </div>
+                <div class="loading-text">กำลังโหลดสถานการณ์น้ำ...</div>
+              </div>
+
               <canvas id="waterCompareChart"></canvas>
             </div>
+
           </div>
 
           <div class="kpi-chart-panel">
